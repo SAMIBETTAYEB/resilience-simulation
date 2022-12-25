@@ -1,4 +1,4 @@
-const log = (message) => process.env.debug && console.log(message);
+const {log, initilizeNetwork, divideByGroup} = require("./utilis");
 
 const simulateResilience = (numberOfCapturedNode = 20) => {
 // Simultate resilience against node capture where each 1000 nodes, and each node has 14 neighbors
@@ -8,29 +8,7 @@ const numberOfGateways = numberOfNodes / 10;
 const numberOfNeighbors = 14;
 
 // nodes is an array of objects, each object is a node with its neighbors and its type (gateway or constrained)
-const nodes = [];
-// Push gateway nodes
-for (let i = 0; i < numberOfGateways; i++) {
-  nodes.push({ type: 'gateway', neighbors: [] });
-}
-// Push constrained nodes
-for (let i = 0; i < numberOfNodes - numberOfGateways; i++) {
-  nodes.push({ type: 'constrained', neighbors: [] });
-}
-
-// Sort nodes randomly
-nodes.sort(() => Math.random() - 0.5);
-
-// Add 14 neighbors to each node, where a neighbor is represented by an index in the nodes array
-for (let i = 0; i < nodes.length; i++) {
-  for (let j = 0; j < numberOfNeighbors; j++) {
-    let neighbor = Math.floor(Math.random() * nodes.length);
-    while (neighbor === i || nodes[i].neighbors.includes(neighbor) || nodes[i].neighbors.length >= numberOfNeighbors) {
-      neighbor = Math.floor(Math.random() * nodes.length);
-    }
-    nodes[i].neighbors.push(neighbor);
-  }
-}
+const nodes = initilizeNetwork(numberOfNodes, numberOfGateways, numberOfNeighbors);
 
 // Print the nodes array
 // console.log(JSON.stringify(nodes, null, 2));
@@ -38,16 +16,17 @@ for (let i = 0; i < nodes.length; i++) {
 
 // Assume that nodes is an array of objects representing the nodes in the network, where each object has a "neighbors" property that is an array of the indices of the node's neighbors in the nodes array
 
-let numBidirectionalLinks = 0;
-
-for (let i = 0; i < nodes.length; i++) {
-  for (const neighbor of nodes[i].neighbors) {
-    // If the current node is a neighbor of its neighbor, increment the counter
-    if (nodes[neighbor].neighbors.includes(i)) {
-      numBidirectionalLinks++;
-    }
+  // Get all the bidirectional links
+  let numBidirectionalLinks = 0;
+  for (let i = 0; i < nodes.length; i++) {
+    numBidirectionalLinks += nodes[i].neighbors.length
+    // for (const neighbor of nodes[i].neighbors) {
+    //   // If the current node is a neighbor of its neighbor, increment the counter
+    //   // if (nodes[neighbor].neighbors.includes(i)) {
+    //     // numBidirectionalLinks++;
+    //   // }
+    // }
   }
-}
 
 log(`Number of bidirectional links: ${numBidirectionalLinks}`);
 
@@ -69,7 +48,7 @@ while (capturedNodes.size < numberOfCapturedNode) {
 //   }
 // }
 
-log("Compromised Nodes", capturedNodes);
+console.log({"Compromised Nodes": capturedNodes.size});
 
 // Print of fraction of compromised links to total number of links
 let numCompromisedLinks = 0;
@@ -79,7 +58,7 @@ for (const node of capturedNodes) {
   if (nodes[node].type === 'gateway') {
     numCompromisedLinks += 0;
   } else {
-    numCompromisedLinks += nodes[node].neighbors.filter(neighbor => capturedNodes.has(neighbor)).length * 2;
+    numCompromisedLinks += nodes[node].neighbors.filter(neighbor => !capturedNodes.has(neighbor)).length * 2 + nodes[node].neighbors.filter(neighbor => capturedNodes.has(neighbor)).length;
   }
 }
 
@@ -108,6 +87,7 @@ let results = {};
 for (let i = 0; i <= 20; i++) {
   sum = 0;
 for (let j = 0; j < 1000; j++) {
+  log(`Simulation ${i}-${j + 1}:`)
   simulation = simulateResilience(i);
   sum += simulation.fractionCompromisedLinks;
   log(`Number of compromised links: ${simulation.numCompromisedLinks}`);
