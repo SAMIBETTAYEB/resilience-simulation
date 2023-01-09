@@ -57,3 +57,24 @@ module.exports.divideByGroup = (nodes, numberOfGroups) => {
   }
   return nodes;
 }
+
+function calculateCompromisedLinks(capturedNodes, nodes, tpm = true, secretsCiphered = false) {
+  const compromisedLinksOfOtherSchemes = new Set();
+  // For each compromised node, add its neighbors to the compromised links of other schemes
+  for (const node of capturedNodes) {
+    if (tpm && nodes[node].type === 'gateway')
+      continue;
+    for (const neighbor of nodes[node].neighbors) {
+      compromisedLinksOfOtherSchemes.add(`${node}-${neighbor}`);
+      // Add the neighbor of neighbor to the compromised links of other schemes
+      // If the secrets are ciphered, then the compromised node can't see the neighbor of neighbor
+      if (secretsCiphered) continue;
+      for (const neighborOfNeighbor of nodes[neighbor].neighbors) {
+        compromisedLinksOfOtherSchemes.add(`${neighbor}-${neighborOfNeighbor}`);
+        compromisedLinksOfOtherSchemes.add(`${neighborOfNeighbor}-${neighbor}`);
+      }
+    }
+  }
+  return compromisedLinksOfOtherSchemes.size;
+}
+exports.calculateCompromisedLinks = calculateCompromisedLinks;
