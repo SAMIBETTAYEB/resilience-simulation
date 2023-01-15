@@ -1,4 +1,4 @@
-const {log, initilizeNetwork, divideByGroup, calculateCompromisedLinks} = require("./utilis");
+const {log, initilizeNetwork, calculateCompromisedLinks} = require("./utilis");
 
 const simulateResilience = (numberOfCapturedNode = 20) => {
 // Simultate resilience against node capture where each 1000 nodes, and each node has 14 neighbors
@@ -51,30 +51,31 @@ while (capturedNodes.size < numberOfCapturedNode) {
 console.log({"Compromised Nodes": capturedNodes.size});
 
 // Print of fraction of compromised links to total number of links
-let numCompromisedLinks = 0;
+// let numCompromisedLinks = 0;
 // If the compromised node is a gateway, then the compromised link is 0
 // If the compromised node is a constrained node, then the compromised link is the twice the number of its neighbors that are not compromised
-for (const node of capturedNodes) {
-  if (nodes[node].type === 'gateway') {
-    numCompromisedLinks += 0;
-  } else {
-    numCompromisedLinks += nodes[node].neighbors.filter(neighbor => !capturedNodes.has(neighbor)).length * 2 + nodes[node].neighbors.filter(neighbor => capturedNodes.has(neighbor)).length;
-  }
-}
+// for (const node of capturedNodes) {
+//   if (nodes[node].type === 'gateway') {
+//     numCompromisedLinks += 0;
+//   } else {
+//     numCompromisedLinks += nodes[node].neighbors.filter(neighbor => !capturedNodes.has(neighbor)).length * 2 + nodes[node].neighbors.filter(neighbor => capturedNodes.has(neighbor)).length;
+//   }
+// }
 
+const compromisedLinksOfOurScheme = calculateCompromisedLinks(capturedNodes, nodes, true, false);
 // Declare a set to store the compromised links of other schemes
-const compromisedLinksOfOtherSchemesWithTPM = calculateCompromisedLinks(capturedNodes, nodes);
-const compromisedLinksOfOtherSchemesWithoutTPM = calculateCompromisedLinks(capturedNodes, nodes, false);
+const compromisedLinksOfOtherSchemesWithTPM = calculateCompromisedLinks(capturedNodes, nodes, true, true);
+const compromisedLinksOfOtherSchemesWithoutTPM = calculateCompromisedLinks(capturedNodes, nodes, false, false);
 
 // Return an object that contains the number of compromised nodes and the number of compromised links and the number of total links in the network (including bidirectional links) and the number of total nodes in the network (including gateways) and the fraction of compromised links to total number of links
 return {
   numCompromisedNodes: capturedNodes.size,
-  numCompromisedLinks: numCompromisedLinks,
+  numCompromisedLinks: compromisedLinksOfOurScheme,
   numTotalLinks: numBidirectionalLinks,
   numTotalNodes: nodes.length,
   // Filter out the gateways from the compromised nodes to get the length of the compromised gateways
   numCompromisedGateways: [...capturedNodes].filter(node => nodes[node].type === 'gateway').length,
-  fractionCompromisedLinks: numCompromisedLinks / numBidirectionalLinks,
+  fractionCompromisedLinks: compromisedLinksOfOurScheme / numBidirectionalLinks,
   numCompromisedLinksOfOtherSchemesWithTPM: compromisedLinksOfOtherSchemesWithTPM,
   numCompromisedLinksOfOtherSchemesWithoutTPM: compromisedLinksOfOtherSchemesWithoutTPM,
   fractionCompromisedLinksOfTPM: compromisedLinksOfOtherSchemesWithTPM / numBidirectionalLinks,

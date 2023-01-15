@@ -58,20 +58,47 @@ module.exports.divideByGroup = (nodes, numberOfGroups) => {
   return nodes;
 }
 
-function calculateCompromisedLinks(capturedNodes, nodes, tpm = true, secretsCiphered = false) {
+/**
+ * 
+ * @param {Set<String>} capturedNodes The captured nodes
+ * @param {Array} nodes The nodes array
+ * @param {Boolean} tpm Is the memory protected by TPM (Trusted Platform Module)
+ * @param {Boolean} keepNeighborsSecrets Does the captured nodes contain all the secrets of their neighbors
+ * @returns {Set<String>} The compromised links of other schemes
+ */
+function calculateCompromisedLinks(capturedNodes, nodes, tpm = true, keepNeighborsSecrets = false) {
   const compromisedLinksOfOtherSchemes = new Set();
+  const nonCapturedNeighborsWithCompromisedLinks = new Set();
   // For each compromised node, add its neighbors to the compromised links of other schemes
   for (const node of capturedNodes) {
     if (tpm && nodes[node].type === 'gateway')
       continue;
     for (const neighbor of nodes[node].neighbors) {
       compromisedLinksOfOtherSchemes.add(`${node}-${neighbor}`);
+      compromisedLinksOfOtherSchemes.add(`${neighbor}-${node}`);
+      // If the neighbor is not captured, then add it to the non-captured neighbors with compromised links
+      if (!capturedNodes.has(neighbor)) {
+        nonCapturedNeighborsWithCompromisedLinks.add(neighbor);
+      }
       // Add the neighbor of neighbor to the compromised links of other schemes
       // If the secrets are ciphered, then the compromised node can't see the neighbor of neighbor
-      if (secretsCiphered) continue;
-      for (const neighborOfNeighbor of nodes[neighbor].neighbors) {
-        compromisedLinksOfOtherSchemes.add(`${neighbor}-${neighborOfNeighbor}`);
-        compromisedLinksOfOtherSchemes.add(`${neighborOfNeighbor}-${neighbor}`);
+      // if (secretsCiphered) continue;
+      // for (const neighborOfNeighbor of nodes[neighbor].neighbors) {
+      //   compromisedLinksOfOtherSchemes.add(`${neighbor}-${neighborOfNeighbor}`);
+      //   compromisedLinksOfOtherSchemes.add(`${neighborOfNeighbor}-${neighbor}`);
+      // }
+    }
+  }
+
+  // If captured nodes contains contain all the secrets of their neighbors
+  if (keepNeighborsSecrets) {
+    // For each non-captured neighbor with compromised links, add the rest of non-captured neighbors to the compromised links in condition that they are neighbors
+    for (const nonCapturedNeighbor of nonCapturedNeighborsWithCompromisedLinks) {
+      for (const nonCapturedNeighbor2 of nonCapturedNeighborsWithCompromisedLinks) {
+        if (nodes[nonCapturedNeighbor].neighbors.includes(nonCapturedNeighbor2)) {
+          compromisedLinksOfOtherSchemes.add(`${nonCapturedNeighbor}-${nonCapturedNeighbor2}`);
+          compromisedLinksOfOtherSchemes.add(`${nonCapturedNeighbor2}-${nonCapturedNeighbor}`);
+        }
       }
     }
   }
