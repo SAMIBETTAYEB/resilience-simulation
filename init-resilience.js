@@ -1,4 +1,4 @@
-const {log, initilizeNetwork, divideByGroup} = require("./utilis");
+const {log, initilizeNetwork, divideByGroup, calculateCompromisedLinks} = require("./utilis");
 
 const simulateInitResilience = (numberOfCapturedNode = 20) => {
   // Simultate resilience against node capture where each 1000 nodes, and each node has 14 neighbors
@@ -57,15 +57,22 @@ const simulateInitResilience = (numberOfCapturedNode = 20) => {
     }
   }
 
-  const numCompromisedLinks = compromisedLinks.size;
+  const numCompromisedLinks = calculateCompromisedLinks(capturedNodes, nodes, true, false);
 
   let matrixBasedCompromisedLinksFraction = 0;
+  let withoutTPMCompromisedLinksFraction = 0;
   // If there is at least one captured constrained node, then the fraction of compromised links is 1
   // If all the captured nodes are gateways, then the fraction of compromised links is 0
   if ([...capturedNodes].some(node => nodes[node].type === 'constrained')) {
     matrixBasedCompromisedLinksFraction = 1;
   } else {
     matrixBasedCompromisedLinksFraction = 0;
+  }
+
+  if (capturedNodes.size > 0) {
+    withoutTPMCompromisedLinksFraction = 1;
+  } else {
+    withoutTPMCompromisedLinksFraction = 0;
   }
 
 
@@ -75,7 +82,8 @@ const simulateInitResilience = (numberOfCapturedNode = 20) => {
     numCompromisedLinks,
     numTotalLinks: numBidirectionalLinks,
     fractionCompromisedLinks: numCompromisedLinks / (numBidirectionalLinks),
-    matrixBasedCompromisedLinksFraction
+    matrixBasedCompromisedLinksFraction,
+    withoutTPMCompromisedLinksFraction
   };
 
 }
@@ -90,25 +98,31 @@ process.env.debug = true;
 let sum = 0;
 let results = {};
 let matrixBasedResults = {};
+let withoutTPMResults = {};
 // The number of compromised nodes varies from 0 to 20
 for (let i = 0; i <= 20; i++) {
   sum = 0;
   sumMatrixBased = 0;
+  sumWithoutTPM = 0;
   for (let j = 0; j < 1000; j++) {
     log(`Simulation ${i}-${j + 1}:`)
     simulation = simulateInitResilience(i);
     sum += simulation.fractionCompromisedLinks;
     sumMatrixBased += simulation.matrixBasedCompromisedLinksFraction;
+    sumWithoutTPM += simulation.withoutTPMCompromisedLinksFraction;
     log(`Number of compromised links: ${simulation.numCompromisedLinks}`);
     log(`Number of Total links: ${simulation.numTotalLinks}`);
     log(`Fraction of compromised links: ${simulation.fractionCompromisedLinks}`);
     log(`Matrix based fraction of compromised links: ${simulation.matrixBasedCompromisedLinksFraction}`);
+    log(`Without TPM fraction of compromised links: ${simulation.withoutTPMCompromisedLinksFraction}`);
     log("-----------------------");
   }
   // Append the average of fraction of compromised links to the results object
   results[i] = sum / 1000;
   matrixBasedResults[i] = sumMatrixBased / 1000;
+  withoutTPMResults[i] = sumWithoutTPM / 1000;
 }
 // log(`Average fraction of compromised links: ${sum / 1000}`);
 log(results);
 log(matrixBasedResults);
+log(withoutTPMResults);
